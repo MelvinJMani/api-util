@@ -8,7 +8,8 @@
   "license": "MIT",
   "scripts": {
     "test": "jest test",
-    "test:coverage": "jest test --coverage"
+    "test:coverage": "jest test --coverage", 
+    "test:s" : "jest test -t \" \"" 
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

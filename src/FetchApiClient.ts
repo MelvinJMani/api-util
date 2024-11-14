@@ -75,7 +75,7 @@ class FetchApiClient {
         this.requestInterceptors.push(interceptor);
     }
 
-    public addResponseInterceptor(interceptor: (response: Response) => Promise<any> | any): void {
+    public addResponseInterceptor(interceptor: (data: Response | any) => Promise<any> | any): void {
         this.responseInterceptors.push(interceptor);
     }
 
@@ -85,15 +85,20 @@ class FetchApiClient {
     }
 
     private async applyResponseInterceptors(response: Response): Promise<any> {
-        let modifiedResponse = response;
+        // Parse JSON only once if the response is OK and has JSON content type
+        const contentType = response.headers.get("content-type") || "";
+        let data = response;
+    
+        if (response.ok && contentType.includes("application/json")) {
+            data = await response.json();
+        }
+    
+        // Pass parsed data through each interceptor
         for (const interceptor of this.responseInterceptors) {
-            modifiedResponse = await interceptor(modifiedResponse);
+            data = await interceptor(data);
         }
-        // Parse JSON response if the content type is JSON
-        if (modifiedResponse.ok && modifiedResponse.headers.get("content-type")?.includes("application/json")) {
-            return modifiedResponse.json();
-        }
-        return modifiedResponse;
+        
+        return data;
     }
 
     // Main request method with caching, rate limiting, and circuit breaker
