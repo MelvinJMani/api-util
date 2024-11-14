@@ -1,0 +1,24 @@
+{
+  "name": "api-util",
+  "version": "1.0.0",
+  "description": "A lightweight, modular API utility plugin for JavaScript applications with two versions: one based on fetch and another based on axios.",
+  "main": "index.js",
+  "repository": "https://github.com/MelvinJMani/api-util.git",
+  "author": "Melvin Joseph Mani <melvinjmani@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest test",
+    "test:coverage": "jest test --coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "fetch-mock": "^12.1.0",
+    "jest": "^29.7.0",
+    "jest-fetch-mock": "^3.0.3",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
