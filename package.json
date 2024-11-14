@@ -8,7 +8,8 @@
   "license": "MIT",
   "scripts": {
     "test": "jest test",
-    "test:coverage": "jest test --coverage"
+    "test:coverage": "jest test --coverage",
+    "compile": "tsc src/FetchApiClient.ts --outDir playground/js"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

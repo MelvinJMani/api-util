@@ -4,7 +4,7 @@ type RequestOptions = {
     body?: any;
     timeout?: number;
     retryCount?: number;
-    cacheDuration?: number; // Caching duration in milliseconds for GET requests
+    cacheDuration?: number;
 };
 
 interface ConfigOptions {
@@ -14,6 +14,16 @@ interface ConfigOptions {
     retryCount?: number;
     rateLimitCount?: number;
     rateLimitInterval?: number;
+    enableLogging?: boolean; 
+    logLevel?: LogLevel;
+};
+
+enum LogLevel {
+    NONE = 0,
+    ERROR = 1,
+    WARN = 2,
+    INFO = 3,
+    DEBUG = 4,
 }
 
 class FetchApiClient {
@@ -37,6 +47,8 @@ class FetchApiClient {
     private failedAttempts: number = 0;
     private circuitBreakerOpen: boolean = false;
     private circuitBreakerTimeout: number = 30000; // 30 seconds for the circuit breaker
+    private logLevel: LogLevel;
+    private enableLogging: boolean;
 
     private constructor(config: ConfigOptions) {
         this.baseUrl = config.baseUrl || '';
@@ -46,6 +58,9 @@ class FetchApiClient {
 
         this.rateLimitCount = config.rateLimitCount || 60;
         this.rateLimitInterval = config.rateLimitInterval || 60000;
+
+        this.enableLogging = config.enableLogging ?? true;
+        this.logLevel = config.logLevel ?? LogLevel.INFO;
 
         // Start processing the queue
         this.processQueue();
@@ -70,15 +85,6 @@ class FetchApiClient {
         }
     }
 
-    // Add request/response interceptors
-    public addRequestInterceptor(interceptor: (options: RequestOptions) => RequestOptions): void {
-        this.requestInterceptors.push(interceptor);
-    }
-
-    public addResponseInterceptor(interceptor: (data: Response | any) => Promise<any> | any): void {
-        this.responseInterceptors.push(interceptor);
-    }
-
     // Apply interceptors
     private applyRequestInterceptors(options: RequestOptions): RequestOptions {
         return this.requestInterceptors.reduce((opts, interceptor) => interceptor(opts), options);
@@ -99,6 +105,25 @@ class FetchApiClient {
         }
         
         return data;
+    }
+
+    // Add request/response interceptors
+    public addRequestInterceptor(interceptor: (options: RequestOptions) => RequestOptions): void {
+        this.requestInterceptors.push(interceptor);
+    }
+
+    public addResponseInterceptor(interceptor: (data: Response | any) => Promise<any> | any): void {
+        this.responseInterceptors.push(interceptor);
+    }
+
+    public async batchRequests(requests: Array<{ endpoint: string; options?: RequestOptions }>): Promise<any[]> {
+        // Map each request to a promise that executes the request method
+        const requestPromises = requests.map(({ endpoint, options }) =>
+            this.request(endpoint, options)
+        );
+
+        // Use Promise.all to execute all requests in parallel
+        return Promise.all(requestPromises);
     }
 
     // Main request method with caching, rate limiting, and circuit breaker
@@ -160,7 +185,7 @@ class FetchApiClient {
     private getFromCache(url: string): any | null {
         const cached = this.cache.get(url);
         if (cached && Date.now() < cached.expiry) {
-            this.logInfo(`Cache hit for ${url}`);
+            this.logInfo('Cache hit for URL', { url });
             return cached.data;
         }
         this.cache.delete(url); // Remove expired cache
@@ -173,7 +198,7 @@ class FetchApiClient {
             this.circuitBreakerOpen = false;
             this.failedAttempts = 0;
         }, this.circuitBreakerTimeout);
-        this.logInfo('Circuit breaker opened');
+        this.logInfo('Circuit breaker opened', { failedAttempts: this.failedAttempts });
     }
 
     private enqueueRequest(url: string, options: RequestOptions, resolve: (value: any) => void, reject: (reason?: any) => void) {
@@ -214,9 +239,23 @@ class FetchApiClient {
     }
 
     // Logging
+    private log(level: LogLevel, message: string, data: any = {}) {
+        if (!this.enableLogging || level > this.logLevel) return;
+    
+        const levelName = LogLevel[level]; // Convert enum to string
+        const timestamp = new Date().toISOString();
+    
+        console.log(`[${timestamp}] [${levelName}] ${message}`, data);
+    }
+
     private logRequest(url: string, options: RequestInit, response: any) {
         const headers: Record<string, string> = this.convertHeadersToRecord(options.headers);
-        console.log('Request:', { url, options: { ...options, headers }, response });
+        
+        this.log(LogLevel.INFO, 'Request sent', {
+            url,
+            options: { ...options, headers },
+            response,
+        });
     }
 
     // Helper function to convert headers to Record<string, string>
@@ -238,12 +277,13 @@ class FetchApiClient {
     
 
     private logError(error: any) {
-        console.error('Error:', error);
+        this.log(LogLevel.ERROR, 'Request error', { error: error.message || error });
     }
 
-    private logInfo(message: string) {
-        console.info('Info:', message);
+    private logInfo(message: string, data: any = {}) {
+        this.log(LogLevel.INFO, message, data);
     }
+    
 
     // Public methods for GET, POST, PUT, DELETE
     public get(url: string, options?: RequestOptions): Promise<any> {
