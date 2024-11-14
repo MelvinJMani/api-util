@@ -89,6 +89,10 @@ class FetchApiClient {
         for (const interceptor of this.responseInterceptors) {
             modifiedResponse = await interceptor(modifiedResponse);
         }
+        // Parse JSON response if the content type is JSON
+        if (modifiedResponse.ok && modifiedResponse.headers.get("content-type")?.includes("application/json")) {
+            return modifiedResponse.json();
+        }
         return modifiedResponse;
     }
 
