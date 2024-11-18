@@ -9,11 +9,13 @@
   "scripts": {
     "test": "jest test",
     "test:coverage": "jest test --coverage",
-    "compile": "tsc src/FetchApiClient.ts --outDir playground/js"
+    "compile": "tsc src/FetchApiClient.ts --outDir playground/js", 
+    "dev" : "http-server -o ./playground/ -p 4000"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "fetch-mock": "^12.1.0",
+    "http-server": "^14.1.1",
     "jest": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
     "ts-jest": "^29.2.5",

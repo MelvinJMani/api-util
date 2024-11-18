@@ -71,6 +71,12 @@ class FetchApiClient {
         }
     }
 
+    /**
+     * Get or create an instance of FetchApiClient.
+     * @param name Optional name to create or fetch a specific instance.
+     * @param config Configuration options for the instance.
+     * @returns An instance of FetchApiClient.
+     */
     public static getInstance(name: string | null = null, config: ConfigOptions = {}): FetchApiClient {
         if (name) {
             if (!FetchApiClient.instances[name]) {
@@ -107,15 +113,27 @@ class FetchApiClient {
         return data;
     }
 
-    // Add request/response interceptors
+    /**
+     * Add a request interceptor to modify request options before execution.
+     * @param interceptor A function to transform the request options.
+     */
     public addRequestInterceptor(interceptor: (options: RequestOptions) => RequestOptions): void {
         this.requestInterceptors.push(interceptor);
     }
 
+    /**
+     * Add a response interceptor to modify response data after execution.
+     * @param interceptor A function to transform the response data.
+     */
     public addResponseInterceptor(interceptor: (data: Response | any) => Promise<any> | any): void {
         this.responseInterceptors.push(interceptor);
     }
 
+    /**
+     * Perform multiple API requests in parallel.
+     * @param requests An array of request objects with endpoint and options.
+     * @returns An array of responses for all the requests.
+     */
     public async batchRequests(requests: Array<{ endpoint: string; options?: RequestOptions }>): Promise<any[]> {
         // Map each request to a promise that executes the request method
         const requestPromises = requests.map(({ endpoint, options }) =>
@@ -126,7 +144,12 @@ class FetchApiClient {
         return Promise.all(requestPromises);
     }
 
-    // Main request method with caching, rate limiting, and circuit breaker
+    /**
+     * Perform an API request with caching, rate limiting, and circuit breaker.
+     * @param url The endpoint URL for the request.
+     * @param options Request options including method, headers, and body.
+     * @returns The parsed response data.
+     */
     public async request(url: string, options: RequestOptions = {}): Promise<any> {
         if (this.circuitBreakerOpen) {
             throw new Error('Circuit breaker is open. Request temporarily blocked.');
@@ -251,7 +274,7 @@ class FetchApiClient {
     private logRequest(url: string, options: RequestInit, response: any) {
         const headers: Record<string, string> = this.convertHeadersToRecord(options.headers);
         
-        this.log(LogLevel.INFO, 'Request sent', {
+        this.log(LogLevel.INFO, 'Request: ', {
             url,
             options: { ...options, headers },
             response,
@@ -274,7 +297,6 @@ class FetchApiClient {
             return headers;
         }
     }
-    
 
     private logError(error: any) {
         this.log(LogLevel.ERROR, 'Request error', { error: error.message || error });
@@ -285,19 +307,42 @@ class FetchApiClient {
     }
     
 
-    // Public methods for GET, POST, PUT, DELETE
+    /**
+     * Perform a GET request.
+     * @param url The endpoint URL for the GET request.
+     * @param options Optional request options.
+     * @returns The parsed response data.
+     */
     public get(url: string, options?: RequestOptions): Promise<any> {
         return this.request(url, { ...options, method: 'GET' });
     }
 
+    /**
+     * Perform a POST request.
+     * @param url The endpoint URL for the POST request.
+     * @param options Optional request options including body and headers.
+     * @returns The parsed response data.
+     */
     public post(url: string, options?: RequestOptions): Promise<any> {
         return this.request(url, { ...options, method: 'POST' });
     }
 
+    /**
+     * Perform a PUT request.
+     * @param url The endpoint URL for the PUT request.
+     * @param options Optional request options including body and headers.
+     * @returns The parsed response data.
+     */
     public put(url: string, options?: RequestOptions): Promise<any> {
         return this.request(url, { ...options, method: 'PUT' });
     }
 
+    /**
+     * Perform a DELETE request.
+     * @param url The endpoint URL for the DELETE request.
+     * @param options Optional request options.
+     * @returns The parsed response data.
+     */
     public delete(url: string, options?: RequestOptions): Promise<any> {
         return this.request(url, { ...options, method: 'DELETE' });
     }
