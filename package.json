@@ -9,10 +9,12 @@
   "scripts": {
     "test": "jest test",
     "test:coverage": "jest test --coverage",
-    "compile": "tsc src/FetchApiClient.ts --outDir playground/js", 
-    "dev" : "http-server -o ./playground/ -p 4000"
+    "compile": "tsc src/FetchApiClient.ts --outDir playground/js",
+    "dev": "http-server -o ./playground/ -p 4000", 
+    "lint" : "biome lint --skip=style --skip=suspicious/noExplicitAny --write ./src"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "@types/jest": "^29.5.14",
     "fetch-mock": "^12.1.0",
     "http-server": "^14.1.1",
