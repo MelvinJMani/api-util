@@ -48,9 +48,18 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setMockResponse = setMockResponse;
+var LogLevel;
+(function (LogLevel) {
+    LogLevel[LogLevel["NONE"] = 0] = "NONE";
+    LogLevel[LogLevel["ERROR"] = 1] = "ERROR";
+    LogLevel[LogLevel["WARN"] = 2] = "WARN";
+    LogLevel[LogLevel["INFO"] = 3] = "INFO";
+    LogLevel[LogLevel["DEBUG"] = 4] = "DEBUG";
+})(LogLevel || (LogLevel = {}));
 var FetchApiClient = /** @class */ (function () {
     function FetchApiClient(config) {
         var _this = this;
+        var _a, _b;
         this.requestInterceptors = [];
         this.responseInterceptors = [];
         this.cache = new Map(); // Cache for GET requests
@@ -60,19 +69,27 @@ var FetchApiClient = /** @class */ (function () {
         this.failedAttempts = 0;
         this.circuitBreakerOpen = false;
         this.circuitBreakerTimeout = 30000; // 30 seconds for the circuit breaker
-        this.baseUrl = config.baseUrl || '';
+        this.baseUrl = config.baseUrl || "";
         this.defaultHeaders = config.headers || {};
         this.timeout = config.timeout || 5000;
         this.retryCount = config.retryCount || 3;
         this.rateLimitCount = config.rateLimitCount || 60;
         this.rateLimitInterval = config.rateLimitInterval || 60000;
+        this.enableLogging = (_a = config.enableLogging) !== null && _a !== void 0 ? _a : true;
+        this.logLevel = (_b = config.logLevel) !== null && _b !== void 0 ? _b : LogLevel.INFO;
         // Start processing the queue
         this.processQueue();
         // Inside the constructor
-        if (typeof window !== 'undefined') {
+        if (typeof window !== "undefined") {
             window.addEventListener("online", function () { return _this.retryOfflineRequests(); });
         }
     }
+    /**
+     * Get or create an instance of FetchApiClient.
+     * @param name Optional name to create or fetch a specific instance.
+     * @param config Configuration options for the instance.
+     * @returns An instance of FetchApiClient.
+     */
     FetchApiClient.getInstance = function (name, config) {
         if (name === void 0) { name = null; }
         if (config === void 0) { config = {}; }
@@ -88,13 +105,6 @@ var FetchApiClient = /** @class */ (function () {
             }
             return FetchApiClient.defaultInstance;
         }
-    };
-    // Add request/response interceptors
-    FetchApiClient.prototype.addRequestInterceptor = function (interceptor) {
-        this.requestInterceptors.push(interceptor);
-    };
-    FetchApiClient.prototype.addResponseInterceptor = function (interceptor) {
-        this.responseInterceptors.push(interceptor);
     };
     // Apply interceptors
     FetchApiClient.prototype.applyRequestInterceptors = function (options) {
@@ -131,7 +141,45 @@ var FetchApiClient = /** @class */ (function () {
             });
         });
     };
-    // Main request method with caching, rate limiting, and circuit breaker
+    /**
+     * Add a request interceptor to modify request options before execution.
+     * @param interceptor A function to transform the request options.
+     */
+    FetchApiClient.prototype.addRequestInterceptor = function (interceptor) {
+        this.requestInterceptors.push(interceptor);
+    };
+    /**
+     * Add a response interceptor to modify response data after execution.
+     * @param interceptor A function to transform the response data.
+     */
+    FetchApiClient.prototype.addResponseInterceptor = function (interceptor) {
+        this.responseInterceptors.push(interceptor);
+    };
+    /**
+     * Perform multiple API requests in parallel.
+     * @param requests An array of request objects with endpoint and options.
+     * @returns An array of responses for all the requests.
+     */
+    FetchApiClient.prototype.batchRequests = function (requests) {
+        return __awaiter(this, void 0, void 0, function () {
+            var requestPromises;
+            var _this = this;
+            return __generator(this, function (_a) {
+                requestPromises = requests.map(function (_a) {
+                    var endpoint = _a.endpoint, options = _a.options;
+                    return _this.request(endpoint, options);
+                });
+                // Use Promise.all to execute all requests in parallel
+                return [2 /*return*/, Promise.all(requestPromises)];
+            });
+        });
+    };
+    /**
+     * Perform an API request with caching, rate limiting, and circuit breaker.
+     * @param url The endpoint URL for the request.
+     * @param options Request options including method, headers, and body.
+     * @returns The parsed response data.
+     */
     FetchApiClient.prototype.request = function (url_1) {
         return __awaiter(this, arguments, void 0, function (url, options) {
             var cachedResponse;
@@ -139,10 +187,10 @@ var FetchApiClient = /** @class */ (function () {
             if (options === void 0) { options = {}; }
             return __generator(this, function (_a) {
                 if (this.circuitBreakerOpen) {
-                    throw new Error('Circuit breaker is open. Request temporarily blocked.');
+                    throw new Error("Circuit breaker is open. Request temporarily blocked.");
                 }
                 // Check cache for GET requests
-                if (options.method === 'GET' && options.cacheDuration) {
+                if (options.method === "GET" && options.cacheDuration) {
                     cachedResponse = this.getFromCache(url);
                     if (cachedResponse)
                         return [2 /*return*/, cachedResponse];
@@ -168,7 +216,7 @@ var FetchApiClient = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         fullUrl = "".concat(this.baseUrl).concat(url);
-                        finalOptions = this.applyRequestInterceptors(__assign(__assign({}, options), { headers: __assign(__assign({}, this.defaultHeaders), options.headers), method: options.method || 'GET', body: options.body ? JSON.stringify(options.body) : null }));
+                        finalOptions = this.applyRequestInterceptors(__assign(__assign({}, options), { headers: __assign(__assign({}, this.defaultHeaders), options.headers), method: options.method || "GET", body: options.body ? JSON.stringify(options.body) : null }));
                         requestOptions = __assign({}, finalOptions);
                         _a.label = 1;
                     case 1:
@@ -179,7 +227,7 @@ var FetchApiClient = /** @class */ (function () {
                         return [4 /*yield*/, this.applyResponseInterceptors(response)];
                     case 3:
                         parsedResponse = _a.sent();
-                        if (options.method === 'GET' && options.cacheDuration) {
+                        if (options.method === "GET" && options.cacheDuration) {
                             this.cacheResponse(url, parsedResponse, options.cacheDuration);
                         }
                         this.logRequest(fullUrl, requestOptions, parsedResponse);
@@ -205,7 +253,7 @@ var FetchApiClient = /** @class */ (function () {
     FetchApiClient.prototype.getFromCache = function (url) {
         var cached = this.cache.get(url);
         if (cached && Date.now() < cached.expiry) {
-            this.logInfo("Cache hit for ".concat(url));
+            this.logInfo("Cache hit for URL", { url: url });
             return cached.data;
         }
         this.cache.delete(url); // Remove expired cache
@@ -218,7 +266,9 @@ var FetchApiClient = /** @class */ (function () {
             _this.circuitBreakerOpen = false;
             _this.failedAttempts = 0;
         }, this.circuitBreakerTimeout);
-        this.logInfo('Circuit breaker opened');
+        this.logInfo("Circuit breaker opened", {
+            failedAttempts: this.failedAttempts,
+        });
     };
     FetchApiClient.prototype.enqueueRequest = function (url, options, resolve, reject) {
         this.requestQueue.push({ url: url, options: options, resolve: resolve, reject: reject });
@@ -236,7 +286,8 @@ var FetchApiClient = /** @class */ (function () {
                                     return [2 /*return*/];
                                 now = Date.now();
                                 timeElapsed = now - this.lastRequestTime;
-                                if (!(this.requestCount < this.rateLimitCount || timeElapsed >= this.rateLimitInterval)) return [3 /*break*/, 4];
+                                if (!(this.requestCount < this.rateLimitCount ||
+                                    timeElapsed >= this.rateLimitInterval)) return [3 /*break*/, 4];
                                 if (timeElapsed >= this.rateLimitInterval) {
                                     this.requestCount = 0;
                                     this.lastRequestTime = now;
@@ -265,17 +316,45 @@ var FetchApiClient = /** @class */ (function () {
     };
     // Retry requests when online
     FetchApiClient.prototype.retryOfflineRequests = function () {
-        var _this = this;
-        this.requestQueue.forEach(function (_a) {
-            var url = _a.url, options = _a.options, resolve = _a.resolve, reject = _a.reject;
-            _this.executeRequest(url, options, resolve, reject);
+        return __awaiter(this, void 0, void 0, function () {
+            var batchSize, batch;
+            var _this = this;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        batchSize = 10;
+                        _a.label = 1;
+                    case 1:
+                        if (!(this.requestQueue.length > 0)) return [3 /*break*/, 3];
+                        batch = this.requestQueue.splice(0, batchSize);
+                        return [4 /*yield*/, Promise.all(batch.map(function (_a) {
+                                var url = _a.url, options = _a.options, resolve = _a.resolve, reject = _a.reject;
+                                return _this.executeRequest(url, options, resolve, reject);
+                            }))];
+                    case 2:
+                        _a.sent();
+                        return [3 /*break*/, 1];
+                    case 3: return [2 /*return*/];
+                }
+            });
         });
-        this.requestQueue = [];
     };
     // Logging
+    FetchApiClient.prototype.log = function (level, message, data) {
+        if (data === void 0) { data = {}; }
+        if (!this.enableLogging || level > this.logLevel)
+            return;
+        var levelName = LogLevel[level]; // Convert enum to string
+        var timestamp = new Date().toISOString();
+        console.log("[".concat(timestamp, "] [").concat(levelName, "] ").concat(message), data);
+    };
     FetchApiClient.prototype.logRequest = function (url, options, response) {
         var headers = this.convertHeadersToRecord(options.headers);
-        console.log('Request:', { url: url, options: __assign(__assign({}, options), { headers: headers }), response: response });
+        this.log(LogLevel.INFO, "Request: ", {
+            url: url,
+            options: __assign(__assign({}, options), { headers: headers }),
+            response: response,
+        });
     };
     // Helper function to convert headers to Record<string, string>
     FetchApiClient.prototype.convertHeadersToRecord = function (headers) {
@@ -296,23 +375,49 @@ var FetchApiClient = /** @class */ (function () {
         }
     };
     FetchApiClient.prototype.logError = function (error) {
-        console.error('Error:', error);
+        this.log(LogLevel.ERROR, "Request error", {
+            error: error.message || error,
+        });
     };
-    FetchApiClient.prototype.logInfo = function (message) {
-        console.info('Info:', message);
+    FetchApiClient.prototype.logInfo = function (message, data) {
+        if (data === void 0) { data = {}; }
+        this.log(LogLevel.INFO, message, data);
     };
-    // Public methods for GET, POST, PUT, DELETE
+    /**
+     * Perform a GET request.
+     * @param url The endpoint URL for the GET request.
+     * @param options Optional request options.
+     * @returns The parsed response data.
+     */
     FetchApiClient.prototype.get = function (url, options) {
-        return this.request(url, __assign(__assign({}, options), { method: 'GET' }));
+        return this.request(url, __assign(__assign({}, options), { method: "GET" }));
     };
+    /**
+     * Perform a POST request.
+     * @param url The endpoint URL for the POST request.
+     * @param options Optional request options including body and headers.
+     * @returns The parsed response data.
+     */
     FetchApiClient.prototype.post = function (url, options) {
-        return this.request(url, __assign(__assign({}, options), { method: 'POST' }));
+        return this.request(url, __assign(__assign({}, options), { method: "POST" }));
     };
+    /**
+     * Perform a PUT request.
+     * @param url The endpoint URL for the PUT request.
+     * @param options Optional request options including body and headers.
+     * @returns The parsed response data.
+     */
     FetchApiClient.prototype.put = function (url, options) {
-        return this.request(url, __assign(__assign({}, options), { method: 'PUT' }));
+        return this.request(url, __assign(__assign({}, options), { method: "PUT" }));
     };
+    /**
+     * Perform a DELETE request.
+     * @param url The endpoint URL for the DELETE request.
+     * @param options Optional request options.
+     * @returns The parsed response data.
+     */
     FetchApiClient.prototype.delete = function (url, options) {
-        return this.request(url, __assign(__assign({}, options), { method: 'DELETE' }));
+        return this.request(url, __assign(__assign({}, options), { method: "DELETE" }));
     };
     FetchApiClient.instances = {};
     FetchApiClient.defaultInstance = null;
@@ -320,12 +425,9 @@ var FetchApiClient = /** @class */ (function () {
 }());
 // Mocking for testing
 function setMockResponse(url, response) {
-    FetchApiClient.prototype.request = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                return [2 /*return*/, response];
-            });
-        });
-    };
+    var _this = this;
+    FetchApiClient.prototype.request = function () { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
+        return [2 /*return*/, response];
+    }); }); };
 }
 exports.default = FetchApiClient;
