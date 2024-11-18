@@ -12,7 +12,8 @@
     "compile": "tsc src/FetchApiClient.ts --outDir playground/js",
     "dev": "http-server -o ./playground/ -p 4000",
     "lint": "biome lint --skip=style --skip=suspicious/noExplicitAny --write ./src",
-    "prepare": "husky"
+    "prepare": "husky",
+    "pre-commit": "lint-staged"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
