@@ -13,7 +13,7 @@ pre-push:
       run: npx validate-branch-name
     packages-audit:
       tags: frontend security
-      run: yarn audit --level critical
+      run: yarn audit --filter critical
 commit-msg:
   parallel: true
   scripts:
