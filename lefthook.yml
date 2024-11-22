@@ -1,0 +1,21 @@
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      run: yarn format 
+    types:
+      glob: '*.{js,ts, jsx, tsx}'
+      run: yarn typecheck
+pre-push:
+  parallel: true
+  commands:
+    branchName:
+      run: npx validate-branch-name
+    packages-audit:
+      tags: frontend security
+      run: npm audit
+commit-msg:
+  parallel: true
+  scripts:
+    "commitlint.sh":
+      runner: bash
